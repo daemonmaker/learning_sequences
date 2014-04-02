@@ -1,0 +1,31 @@
+!obj:pylearn2.train.Train {
+    dataset: &train !obj:learning_sequences.code.pylearn2.datasets.spiral.ArchimedeanSpiral2D {
+        bounds_radius: 12.566,
+    },
+    model: !obj:pylearn2.models.mlp.MLP {
+        batch_size: 512,
+        layers: [
+             !obj:pylearn2.models.mlp.RadialBasisFunction {
+                 dim: 1,
+                 layer_name: 'h1',
+                 irange: 0.05,
+                 standard_deviation: 1,
+                 training_data: *train
+             },
+        ],
+        nvis: 100,
+    },
+    algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
+        learning_rate: .1e-5,
+        monitoring_batches: 10,
+        monitoring_dataset: {
+            'train' : *train,
+        },
+        cost: !obj:pylearn2.costs.mlp.Default {},
+        termination_criterion: !obj:pylearn2.termination_criteria.EpochCounter {
+            max_epochs: 10
+        },
+    },
+    save_path: "mlp.pkl",
+    save_freq: 10,
+}
