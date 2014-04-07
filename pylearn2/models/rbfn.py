@@ -8,7 +8,7 @@ __license__ = "3-clause BSD"
 __maintainer__ = "Dustin Webb"
 __email__ = "webbd@iro"
 
-from pylearn2.models
+from pylearn2.models.mlp import *
 
 
 class RadialBasisFunction(Linear):
@@ -23,23 +23,8 @@ class RadialBasisFunction(Linear):
         assert standard_deviation > 0
         self.standard_deviation = standard_deviation
 
-        pdb.set_trace()
-
-        # Select centers
-        centers = np.zeros(
-            self.dim,
-            training_data.frame_length*training_data.frames_per_example)
-
-        num_sequences = training_data.raw_wav.shape[0]
-        samples_idx = np.arange(num_sequences)
-        samples_idx = np.random.shuffle(samples_idx)
-
-        for i in range(self.dim):
-            id1 = samples_idx[i]
-            id2 = np.random.randint(training_data.raw_wav[id1].shape[0])
-            centers[id1] = training_data.raw_wav[id1][id2]
-
-        self.centers = centers.dimshuffle('x', 0, 1)
+        assert(training_data is not None)
+        self.training_data = training_data
 
     @wraps(Layer.fprop)
     def fprop(self, state_below):
@@ -50,12 +35,29 @@ class RadialBasisFunction(Linear):
             state_below = self.input_space.format_as(state_below,
                                                      self.desired_space)
 
-        z = ((state_below - self.centers) ** 2).sum(axis=1)
+        #pdb.set_trace()
+
+        z = ((state_below.flatten() - self.centers) ** 2).sum(axis=1, keepdims = True).T
         if self.layer_name is not None:
             z.name = self.layer_name + '_z'
 
-        p = t.exp(-z/(2*self.standard_deviation**2))
+        p = T.exp(-z/(2*self.standard_deviation**2))
         if self.layer_name is not None:
             p.name = self.layer_name + '_p_'
 
-        return self.transformer.lmul(p)
+        return p
+
+    def set_input_space(self, space):
+        super(RadialBasisFunction, self).set_input_space(space)
+
+        #pdb.set_trace()
+        itr = self.training_data.iterator(
+            mode='random_uniform',
+            batch_size=self.dim,
+            num_batches=1,  # We only want one set of points
+        )
+        self.centers = itr.next()
+
+        del self.training_data
+
+        #pdb.set_trace()

@@ -2,7 +2,7 @@
     dataset: &train !obj:learning_sequences.pylearn2.datasets.spiral.ArchimedeanSpiral2D {
         samples     : 1000,
         space       : "r,theta",
-        task        : "classification",
+        task        : "regression",
         save_path   : "rbfn_spiral_data.pkl",
     },
     model: !obj:pylearn2.models.mlp.MLP {
@@ -10,21 +10,21 @@
         nvis       : 2,
         layers     : [
              !obj:learning_sequences.pylearn2.models.rbfn.RadialBasisFunction {
-                 dim                : 200,
+                 dim                : 10,
                  layer_name         : 'h1',
                  irange             : 0.05,
                  standard_deviation : 1,
                  training_data      : *train,
              },
-             !obj:pylearn2.models.mlp.Sigmoid {
-                 dim        : 1,
+             !obj:pylearn2.models.mlp.Linear {
+                 dim        : 2,
                  layer_name : 'h2',
                  irange     : 0.05,
              },
         ],
     },
     algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
-        learning_rate      : .1e-3,
+        learning_rate      : .1e-5,
         monitoring_batches : 1,
         monitoring_dataset : {
             'train' : *train,
@@ -35,5 +35,5 @@
         },
     },
     save_path : "rbfn_spiral_model.pkl",
-    save_freq : 100,
+    save_freq : 10,
 }

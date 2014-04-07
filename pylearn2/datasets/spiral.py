@@ -13,6 +13,7 @@ import numpy
 import matplotlib.pyplot as plt
 import math
 from pylearn2.datasets import DenseDesignMatrix
+import cPickle
 import pdb
 
 
@@ -27,12 +28,18 @@ class ArchimedeanSpiral2D(DenseDesignMatrix):
     """
     _default_seed = 1
 
-    def __init__(self, turn_rate=1, distance=0,
-                 bounds_radius=2*math.pi, samples=1001,
-                 positive_sample_rate=0.5, rng=None, epsilon_multiplier=2):
+    def __init__(
+        self, space='r,theta', turn_rate=1, distance=0,
+        bounds_radius=2*math.pi, samples=1000,
+        positive_sample_rate=0.5, rng=None, epsilon_multiplier=2,
+        task='classification', load_path=None, save_path=None
+    ):
         """
         Parameters
         ----------
+        space : string
+            Whether to generate the data as radius-angle pairs ('r,theta') or
+            x-y pairs ('x,y').
         turn_rate : double
             Amount by which to turn the spiral.
         distance: double
@@ -44,14 +51,24 @@ class ArchimedeanSpiral2D(DenseDesignMatrix):
             Number of samples to generate.
         positive_sample_rate : float
             Real value in range [0,1] identifying the percentage of samples
-            that should be positive.
+            that should be positive. Only applicable for classification tasks.
         epsilon_multiplier : int
             Scales the sensitivity of comparison between numbers.
         rng : int
             Seed for random number generator.
+        task : string
+            Whether targets should be binary values for 'classification' or the
+            next value in the sequence for reg'regression'.
+        load_path : string
+            Path from which to load data.
+        save_path : string
+            Path to which the data should be saved.
         """
 
         # Validate parameters and set members values
+        assert(space == 'x,y' or space == 'r,theta')
+        self.space = space
+
         self.turn_rate = turn_rate
         self.distance = distance
 
@@ -70,13 +87,25 @@ class ArchimedeanSpiral2D(DenseDesignMatrix):
         assert(epsilon_multiplier > 1)
         self.epsilon = epsilon_multiplier*sys.float_info.epsilon
 
+        assert(task == 'classification' or task == 'regression')
+        self.task = task
+
+        if (task == 'regression'):
+            self.positive_sample_rate = 1
+
         # Initialize RNG
         if rng is None:
             self.rng = numpy.random.RandomState(self._default_seed)
         else:
             self.rng = numpy.random.RandomState(rng)
 
-        (X, y) = self._generate_data()
+        if load_path is None:
+            (X, y) = self._generate_data()
+        else:
+            (X, y) = cPickle.load(open(load_path, 'rb'))
+
+        if save_path is not None:
+            cPickle.dump((X, y), open(save_path, 'wb'))
 
         super(ArchimedeanSpiral2D, self).__init__(X=X, y=y)
 
@@ -87,10 +116,13 @@ class ArchimedeanSpiral2D(DenseDesignMatrix):
         """
 
         # Create random samples
-        X = numpy.random.rand(self.samples, 2)
+        samps = self.samples
+        if self.task == 'regression':
+            samps += 1
+        X = numpy.random.rand(samps, 2)
         X[:, 0] = self.bounds_radius*X[:, 0]
         X[:, 1] = self.max_theta*X[:, 1]
-        y = numpy.zeros(self.samples)
+        y = numpy.zeros((self.samples, 1))
 
         def onSpiral(samp):
             r = (self.turn_rate*samp[1] + self.distance)
@@ -99,7 +131,7 @@ class ArchimedeanSpiral2D(DenseDesignMatrix):
         # Label positive points (assumed all negative initially)
         for i in range(X.shape[0]):
             if onSpiral(X[i, ...]):
-                y[i] = 1
+                y[i, 0] = 1
 
         # Ensure we have the requested number of samples
         pos_samps = int(y.sum())
@@ -107,7 +139,7 @@ class ArchimedeanSpiral2D(DenseDesignMatrix):
         needed_pos_samps = int(math.ceil(needed_pos_samps))
 
         def getRandIdxs(count, label):
-            idxs = numpy.where(y == label)[0]
+            idxs = numpy.copy(numpy.where(y == label)[0])
             numpy.random.shuffle(idxs)
             return idxs
 
@@ -119,7 +151,7 @@ class ArchimedeanSpiral2D(DenseDesignMatrix):
 
             for i in range(pos_samps_diff):
                 idx = idxs[i]
-                y[idx] = 0
+                y[idx, 0] = 0
                 while onSpiral(X[idx, ...]):
                     X[idx, 0] = self.bounds_radius*rng.Random.rand()
 
@@ -131,13 +163,28 @@ class ArchimedeanSpiral2D(DenseDesignMatrix):
             for i in range(pos_samps_diff):
                 idx = idxs[i]
                 X[idx, 0] = self.turn_rate*X[idx, 1] + self.distance
-                y[idx] = 1
+                y[idx, 0] = 1
+
+        if self.space == 'x,y':
+            for i in range(X.shape[0]):
+                x_temp = X[i, 0]*math.cos(X[i, 1])
+                y_temp = X[i, 0]*math.sin(X[i, 1])
+                X[i, 0] = x_temp
+                X[i, 1] = y_temp
+
+        if self.task == 'regression':
+            y = X[1:, :]  # First example is not a target
+            X = X[:-1, :]  # Last example is only a target
 
         return (X, y)
 
 
 def test_generate_data():
-    s = ArchimedeanSpiral2D(positive_sample_rate=1, bounds_radius=2*math.pi)
+    s = ArchimedeanSpiral2D(
+        space='r,theta',
+        task='regression',
+        bounds_radius=2*math.pi,
+    )
 
     (X, y) = s._generate_data()
 
@@ -147,17 +194,24 @@ def test_generate_data():
     pos_samps = y.sum()
     expected_pos_samps = math.ceil(s.samples * s.positive_sample_rate)
 
+    print "Task: " + s.task
+    print "Space: " + s.space
     print "Samples: " + str(s.samples)
     print "Positive sample rate: " + str(s.positive_sample_rate)
     print "Expected positive samples: " + str(expected_pos_samps)
-    print "Positive samples: " + str(pos_samps)
 
-    assert(expected_pos_samps == pos_samps)
+    if (s.task == 'classification'):
+        print "Positive samples: " + str(pos_samps)
 
-    Z = numpy.zeros(X.shape)
-    for i in range(X.shape[0]):
-        Z[i, 0] = X[i, 0]*math.cos(X[i, 1])
-        Z[i, 1] = X[i, 0]*math.sin(X[i, 1])
+        assert(expected_pos_samps == pos_samps)
+
+    if (s.space == 'r,theta'):
+        Z = numpy.zeros(X.shape)
+        for i in range(X.shape[0]):
+            Z[i, 0] = X[i, 0]*math.cos(X[i, 1])
+            Z[i, 1] = X[i, 0]*math.sin(X[i, 1])
+    else:
+        Z = X
 
     plt.scatter(Z[:, 0], Z[:, 1])
     plt.show()
