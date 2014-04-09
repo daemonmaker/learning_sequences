@@ -1,32 +1,38 @@
 !obj:pylearn2.train.Train {
     dataset: &train !obj:learning_sequences.pylearn2.datasets.henonmap.HenonMap {
-        samples: 10000,
-        frame_length: &frame_length 10,
+        samples      : 10000,
+        frame_length : 10,
+        save_path    : "rbfn_henon_data.pkl",
     },
     model: !obj:pylearn2.models.mlp.MLP {
-        batch_size: 1,
-        nvis: 20,
-        layers: [
+        batch_size : 1,
+        nvis       : 2,
+        layers     : [
              !obj:learning_sequences.pylearn2.models.rbfn.RadialBasisFunction {
-                 dim: 2,
-                 layer_name: 'h1',
-                 irange: 0.05,
-                 standard_deviation: 1,
-                 training_data: *train
+                 dim                : 200,
+                 layer_name         : 'h1',
+                 irange             : 0.05,
+                 standard_deviation : 1,
+                 training_data      : *train
+             },
+             !obj:pylearn2.models.mlp.Linear {
+                 dim        : 2,
+                 layer_name : 'h2',
+                 irange     : 0.05,
              },
         ],
     },
     algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
-        learning_rate: .1e-5,
-        monitoring_batches: 1,
-        monitoring_dataset: {
+        learning_rate      : .1e-4,
+        monitoring_batches : 1,
+        monitoring_dataset : {
             'train' : *train,
         },
         cost: !obj:pylearn2.costs.mlp.Default {},
         termination_criterion: !obj:pylearn2.termination_criteria.EpochCounter {
-            max_epochs: 10
+            max_epochs: 1000
         },
     },
-    save_path: "rbfn_sp0iral.pkl",
-    save_freq: 1,
+    save_path: "rbfn_henon_model.pkl",
+    save_freq: 10,
 }

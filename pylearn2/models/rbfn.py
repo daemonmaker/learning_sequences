@@ -35,9 +35,8 @@ class RadialBasisFunction(Linear):
             state_below = self.input_space.format_as(state_below,
                                                      self.desired_space)
 
-        #pdb.set_trace()
-
-        z = ((state_below.flatten() - self.centers) ** 2).sum(axis=1, keepdims = True).T
+        z = (state_below.flatten() - self.centers) ** 2
+        z = z.sum(axis=1, keepdims=True).T
         if self.layer_name is not None:
             z.name = self.layer_name + '_z'
 
