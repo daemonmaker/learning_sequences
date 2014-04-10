@@ -106,7 +106,7 @@ class HenonMap(DenseDesignMatrix):
         X = X[:-1, :]
         X.reshape((1, self.samples*2))  # Flatten
 
-        Z = segment_axis(X, length=self.frame_length*2, overlap=0)
+        Z = segment_axis(X, length=self.frame_length, overlap=0)
 
         y = numpy.zeros((Z.shape[0], 2))
         y[:-1, :] = Z[1:, 0:2]
@@ -119,19 +119,19 @@ def test_generate_data():
     """
     Routine for testing the henon map data generation.
     """
-    h = HenonMap(samples=10000, frame_length=1)
+    h = HenonMap(samples=100000, frame_length=1)
 
     (X, y) = h._generate_data()
 
-    for i in range(X.shape[0]):
-        print str(X[i, ...]) + ' ' + str(y[i])
+    #for i in range(X.shape[0]):
+    #    print str(X[i, ...]) + ' ' + str(y[i])
 
     print "Alpha: " + str(h.alpha)
     print "Beta: " + str(h.beta)
     print "Samples: " + str(h.samples)
     print "Frame length: " + str(h.frame_length)
 
-    pdb.set_trace()
+    #pdb.set_trace()
 
     plt.scatter(X[:, 0], X[:, 1])
     plt.show()

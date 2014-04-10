@@ -115,56 +115,72 @@ class ArchimedeanSpiral2D(DenseDesignMatrix):
         function.
         """
 
+        #pdb.set_trace()
+
         # Create random samples
-        samps = self.samples
-        if self.task == 'regression':
-            samps += 1
-        X = numpy.random.rand(samps, 2)
-        X[:, 0] = self.bounds_radius*X[:, 0]
-        X[:, 1] = self.max_theta*X[:, 1]
         y = numpy.zeros((self.samples, 1))
 
-        def onSpiral(samp):
-            r = (self.turn_rate*samp[1] + self.distance)
-            return abs(samp[0] - r) < self.epsilon
+        # Regression case
+        if self.task == 'regression':
+            samps = self.samples + 1
 
-        # Label positive points (assumed all negative initially)
-        for i in range(X.shape[0]):
-            if onSpiral(X[i, ...]):
-                y[i, 0] = 1
+            deltaT = self.max_theta / float(self.samples)
+            X = numpy.zeros((samps, 2))
+            for i in range(1, X.shape[0]):
+                X[i, 1] = X[i-1, 1] + deltaT
+                X[i, 0] = self.turn_rate*X[i-1, 1] + self.distance
 
-        # Ensure we have the requested number of samples
-        pos_samps = int(y.sum())
-        needed_pos_samps = self.samples * self.positive_sample_rate
-        needed_pos_samps = int(math.ceil(needed_pos_samps))
+            y = X[1:, :]  # First example is not a target
+            X = X[:-1, :]  # Last example is only a target
 
-        def getRandIdxs(count, label):
-            idxs = numpy.copy(numpy.where(y == label)[0])
-            numpy.random.shuffle(idxs)
-            return idxs
+        # Classification case
+        else:
+            X = numpy.random.rand(self.samples, 2)
+            X[:, 0] = self.bounds_radius*X[:, 0]
+            X[:, 1] = self.max_theta*X[:, 1]
 
-        # Case: too many examples
-        # Probabilistically speaking this will not happen.
-        if pos_samps > needed_pos_samps:
-            pos_samps_diff = pos_samps - needed_pos_samps
-            idxs = getRandIdxs(pos_samps_diff, 1)
+            def onSpiral(samp):
+                r = (self.turn_rate*samp[1] + self.distance)
+                return abs(samp[0] - r) < self.epsilon
 
-            for i in range(pos_samps_diff):
-                idx = idxs[i]
-                y[idx, 0] = 0
-                while onSpiral(X[idx, ...]):
-                    X[idx, 0] = self.bounds_radius*rng.Random.rand()
+            # Label positive points (assumed all negative initially)
+            for i in range(X.shape[0]):
+                if onSpiral(X[i, ...]):
+                    y[i, 0] = 1
 
-        # Case: too few examples
-        elif pos_samps < needed_pos_samps:
-            pos_samps_diff = needed_pos_samps - pos_samps
-            idxs = getRandIdxs(pos_samps_diff, 0)
+            # Ensure we have the requested number of samples
+            pos_samps = int(y.sum())
+            needed_pos_samps = self.samples * self.positive_sample_rate
+            needed_pos_samps = int(math.ceil(needed_pos_samps))
 
-            for i in range(pos_samps_diff):
-                idx = idxs[i]
-                X[idx, 0] = self.turn_rate*X[idx, 1] + self.distance
-                y[idx, 0] = 1
+            def getRandIdxs(count, label):
+                idxs = numpy.copy(numpy.where(y == label)[0])
+                numpy.random.shuffle(idxs)
+                return idxs
 
+            # Case: too many examples
+            # Probabilistically speaking this will not happen.
+            if pos_samps > needed_pos_samps:
+                pos_samps_diff = pos_samps - needed_pos_samps
+                idxs = getRandIdxs(pos_samps_diff, 1)
+
+                for i in range(pos_samps_diff):
+                    idx = idxs[i]
+                    y[idx, 0] = 0
+                    while onSpiral(X[idx, ...]):
+                        X[idx, 0] = self.bounds_radius*rng.Random.rand()
+
+            # Case: too few examples
+            elif pos_samps < needed_pos_samps:
+                pos_samps_diff = needed_pos_samps - pos_samps
+                idxs = getRandIdxs(pos_samps_diff, 0)
+
+                for i in range(pos_samps_diff):
+                    idx = idxs[i]
+                    X[idx, 0] = self.turn_rate*X[idx, 1] + self.distance
+                    y[idx, 0] = 1
+
+        # Convert to x,y space if appropriate
         if self.space == 'x,y':
             for i in range(X.shape[0]):
                 x_temp = X[i, 0]*math.cos(X[i, 1])
@@ -172,18 +188,14 @@ class ArchimedeanSpiral2D(DenseDesignMatrix):
                 X[i, 0] = x_temp
                 X[i, 1] = y_temp
 
-        if self.task == 'regression':
-            y = X[1:, :]  # First example is not a target
-            X = X[:-1, :]  # Last example is only a target
-
         return (X, y)
 
 
 def test_generate_data():
     s = ArchimedeanSpiral2D(
-        space='r,theta',
+        space='x,y',
         task='regression',
-        bounds_radius=2*math.pi,
+        bounds_radius=8*math.pi,
     )
 
     (X, y) = s._generate_data()

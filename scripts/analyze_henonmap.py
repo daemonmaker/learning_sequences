@@ -27,21 +27,74 @@ def main():
         model_path = model_path[0]
 
     model = cPickle.load(open(model_path, 'rb'))
-    #pdb.set_trace()
+
+    alpha = 1.4
+    beta = 0.3
+    frame_length = 10
+    samps = 10000
 
     v = T.matrix('v')
     f = theano.function([v], [model.fprop(v)])
 
-    results = numpy.zeros((10000, 2))
-    for i in range(1, results.shape[0]):
-        input = results[i-1, :]
-        input = input.reshape((input.shape[0], 1))
-        output = f(input)
-        print output[0].flatten()
-        results[i, :] = output[0].flatten()
+    if model.layers[0].centers.shape[1] == 2:
+        results = numpy.zeros((samps, 2))
+        for i in range(1, results.shape[0]):
+            input = results[i-1, :]
+            input = input.reshape((input.shape[0], 1))
+            output = f(input)
+            #print output[0].flatten()
+            results[i, :] = output[0].flatten()
 
-    plt.scatter(results[:, 0], results[:, 1])
-    plt.show()
+        plt.scatter(results[:, 0], results[:, 1])
+        plt.show()
+
+    else:
+        X = numpy.zeros((samps, 2))
+        for i in range(1, samps):
+            X[i, 0] = 1 - alpha*X[i-1, 0]**2 + X[i-1, 1]
+            X[i, 1] = beta*X[i-1, 0]
+
+        prediction = numpy.zeros(X.shape)
+        prediction[0:frame_length, :] = X[0:frame_length, :]
+        for i in range(frame_length, samps):
+            input = prediction[i-frame_length/2.0:i, :]
+            input = input.flatten()
+            input = input.reshape(1, input.shape[0])
+            #pdb.set_trace()
+            output = f(input)
+            prediction[i, :] = output[0]
+
+        generation = numpy.zeros(X.shape)
+        #generation[0:frame_length, :] = X[0:frame_length, :]
+        for i in range(frame_length, samps):
+            input = generation[i-frame_length/2.0:i, :]
+            input = input.flatten()
+            input = input.reshape(1, input.shape[0])
+            #pdb.set_trace()
+            output = f(input)
+            generation[i, :] = output[0]
+
+        fig = plt.figure(facecolor="white")
+
+        plt.subplot("131")
+        plt.scatter(X[:, 0], X[:, 1])
+        plt.title('Real System')
+        plt.xlabel('x')
+        plt.ylabel('y')
+
+        plt.subplot("132")
+        plt.scatter(prediction[:, 0], prediction[:, 1])
+        plt.title('Prediction')
+        plt.xlabel('x')
+
+        plt.subplot("133")
+        plt.scatter(generation[:, 0], generation[:, 1])
+        plt.title('Generation')
+        plt.xlabel('x')
+
+        plt.show()
+
+        pdb.set_trace()
 
 if __name__ == '__main__':
     main()

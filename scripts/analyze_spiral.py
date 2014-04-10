@@ -31,30 +31,49 @@ def main():
     v = T.matrix("v")
     f = theano.function([v], [model.fprop(v)])
 
-    right = -10
-    left = 10
-    dist = 0.125
-    t = numpy.arange(right, left, dist)
-    x, y = numpy.meshgrid(t, t)
-    z = numpy.asarray(zip(x.flatten(), y.flatten()))
+    # Determine whether the model is classification or regression
+    # Number of output dims is one for binary classification and
+    # two for regression.
+    if (model.layers[1].dim == 1):
+        right = -10
+        left = 10
+        dist = 0.125
+        t = numpy.arange(right, left, dist)
+        x, y = numpy.meshgrid(t, t)
+        z = numpy.asarray(zip(x.flatten(), y.flatten()))
 
-    #pdb.set_trace()
+        #pdb.set_trace()
 
-    points_per_side = (left - right)/dist
-    #results = numpy.zeros((points_per_side, points_per_side))
-    results = numpy.zeros((z.shape[0], 1))
-    for i in range(z.shape[0]):
-        input = z[i, :]
-        input = input.reshape((input.shape[0], 1))
-        output = f(input)
-        #print output[0].flatten()
-        results[i] = output[0].flatten()
+        points_per_side = (left - right)/dist
+        #results = numpy.zeros((points_per_side, points_per_side))
+        results = numpy.zeros((z.shape[0], 1))
+        for i in range(z.shape[0]):
+            input = z[i, :]
+            input = input.reshape((input.shape[0], 1))
+            output = f(input)
+            #print output[0].flatten()
+            results[i] = output[0].flatten()
 
-    im = results.reshape((points_per_side, points_per_side))
+        im = results.reshape((points_per_side, points_per_side))
 
-    plt.imshow(im)
-    plt.gca().invert_yaxis()
-    plt.show()
+        plt.imshow(im)
+        plt.gca().invert_yaxis()
+        plt.show()
+
+    else:
+        results = numpy.zeros((1000, 2))
+        for i in range(1, results.shape[0]):
+            input = results[i-1, :]
+            input = input.reshape((input.shape[0], 1))
+            output = f(input)
+            results[i, :] = output[0].flatten()
+
+        centers = model.layers[0].centers
+        plt.scatter(centers[:, 0], centers[:, 1], color='red')
+
+        plt.scatter(results[:, 0], results[:, 1])
+
+        plt.show()
 
 
 if __name__ == '__main__':

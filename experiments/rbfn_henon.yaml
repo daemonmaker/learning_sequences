@@ -6,13 +6,13 @@
     },
     model: !obj:pylearn2.models.mlp.MLP {
         batch_size : 1,
-        nvis       : 2,
+        nvis       : 10,
         layers     : [
              !obj:learning_sequences.pylearn2.models.rbfn.RadialBasisFunction {
-                 dim                : 200,
+                 dim                : 100,
                  layer_name         : 'h1',
                  irange             : 0.05,
-                 standard_deviation : 1,
+                 standard_deviation : 0.5,
                  training_data      : *train
              },
              !obj:pylearn2.models.mlp.Linear {
@@ -23,7 +23,7 @@
         ],
     },
     algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
-        learning_rate      : .1e-4,
+        learning_rate      : .1e-3,
         monitoring_batches : 1,
         monitoring_dataset : {
             'train' : *train,
