@@ -119,7 +119,8 @@ def test_generate_data():
     """
     Routine for testing the henon map data generation.
     """
-    h = HenonMap(samples=100000, frame_length=1)
+    samples = 100000
+    h = HenonMap(samples=samples, frame_length=2)
 
     (X, y) = h._generate_data()
 
@@ -133,8 +134,13 @@ def test_generate_data():
 
     #pdb.set_trace()
 
+    figure = plt.figure(facecolor="white")
     plt.scatter(X[:, 0], X[:, 1])
-    plt.show()
+    plt.title("Henon Map " + str(samples) + " Samples")
+    plt.xlabel("x")
+    plt.ylabel("y")
+    #plt.show()
+    plt.savefig("henonmap_" + str(samples))
 
 if __name__ == "__main__":
     test_generate_data()

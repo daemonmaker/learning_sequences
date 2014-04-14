@@ -45,8 +45,14 @@ def main():
             #print output[0].flatten()
             results[i, :] = output[0].flatten()
 
+        figure = plt.figure(facecolor="white")
+
+        plt.title("Henon Map - One-Step Prediction")
         plt.scatter(results[:, 0], results[:, 1])
-        plt.show()
+        plt.xlabel("x")
+        plt.ylabel("y")
+        #plt.show()
+        plt.savefig("henonmap")
 
     else:
         X = numpy.zeros((samps, 2))
@@ -74,7 +80,7 @@ def main():
             output = f(input)
             generation[i, :] = output[0]
 
-        fig = plt.figure(facecolor="white")
+        fig = plt.figure(facecolor="white", figsize=(12, 5), dpi=100)
 
         plt.subplot("131")
         plt.scatter(X[:, 0], X[:, 1])
@@ -92,9 +98,10 @@ def main():
         plt.title('Generation')
         plt.xlabel('x')
 
-        plt.show()
+        #plt.show()
+        plt.savefig("henonmap")
 
-        pdb.set_trace()
+        #pdb.set_trace()
 
 if __name__ == '__main__':
     main()

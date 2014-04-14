@@ -192,10 +192,12 @@ class ArchimedeanSpiral2D(DenseDesignMatrix):
 
 
 def test_generate_data():
+    convert_to_xy = False
+
     s = ArchimedeanSpiral2D(
-        space='x,y',
-        task='regression',
-        bounds_radius=8*math.pi,
+        samples=1000,
+        space='r,theta',
+        task='classification',
     )
 
     (X, y) = s._generate_data()
@@ -217,7 +219,7 @@ def test_generate_data():
 
         assert(expected_pos_samps == pos_samps)
 
-    if (s.space == 'r,theta'):
+    if (convert_to_xy is True) and (s.space == 'r,theta'):
         Z = numpy.zeros(X.shape)
         for i in range(X.shape[0]):
             Z[i, 0] = X[i, 0]*math.cos(X[i, 1])
@@ -225,8 +227,26 @@ def test_generate_data():
     else:
         Z = X
 
+    figure = plt.figure(facecolor="white")
     plt.scatter(Z[:, 0], Z[:, 1])
-    plt.show()
+    plt.title("2D Spiral")
+    if (convert_to_xy is True):
+        plt.ylabel('y')
+        plt.xlabel('x')
+
+    else:
+        plt.ylabel('theta')
+        plt.xlabel('r')
+
+    #plt.show()
+
+    fig_name = "trainging_data-"
+    if convert_to_xy is True:
+        fig_name += "x-y"
+    else:
+        fig_name += "r-theta"
+
+    plt.savefig(fig_name)
 
     #Z = numpy.random.rand(s.samples, 2)
     #plt.scatter(Z[:, 0], Z[:, 1])

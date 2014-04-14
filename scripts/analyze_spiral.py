@@ -56,9 +56,17 @@ def main():
 
         im = results.reshape((points_per_side, points_per_side))
 
+        fig = plt.figure(facecolor='white')
         plt.imshow(im)
-        plt.gca().invert_yaxis()
-        plt.show()
+        fig = plt.gca()
+        fig.invert_yaxis()
+        fig.axes.get_xaxis().set_visible(False)
+        fig.axes.get_yaxis().set_visible(False)
+        plt.xlabel('r')
+        plt.ylabel('theta')
+        plt.title('2 PI Spiral')
+        #plt.show()
+        plt.savefig('spiral_classification')
 
     else:
         results = numpy.zeros((1000, 2))
@@ -73,7 +81,11 @@ def main():
 
         plt.scatter(results[:, 0], results[:, 1])
 
-        plt.show()
+        plt.ylabel('y')
+        plt.xlabel('x')
+        plt.title('2PI Spiral')
+        #plt.show()
+        plt.savefig('spiral')
 
 
 if __name__ == '__main__':
