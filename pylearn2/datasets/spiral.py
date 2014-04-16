@@ -65,7 +65,7 @@ class ArchimedeanSpiral2D(DenseDesignMatrix):
             Path to which the data should be saved.
         """
 
-        # Validate parameters and set members values
+        # Validate parameters and set member variables
         assert(space == 'x,y' or space == 'r,theta')
         self.space = space
 

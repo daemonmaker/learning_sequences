@@ -58,7 +58,7 @@ class HenonMap(DenseDesignMatrix):
             Path to which the data should be saved.
         """
 
-        # Validate parameters and set members values
+        # Validate parameters and set member variables
         self.alpha = alpha
         self.beta = beta
 
