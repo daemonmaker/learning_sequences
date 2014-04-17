@@ -31,6 +31,7 @@ class TIMITPerPhone(DenseDesignMatrix):
                  frame_length,
                  target_width=1,
                  max_examples=None,
+                 example_list=None,
                  random_examples=False,
                  test=False,
                  unit_norm=False,
@@ -45,6 +46,8 @@ class TIMITPerPhone(DenseDesignMatrix):
             The phone to be loaded.
         max_examples : int
             The maximum number of examples to load.
+        example_list : list
+            Specify examples to generate.
         random_examples: boolean
             Whether to select the examples from the data set at random if they
             are not all to be used (e.g. when max_examples is less than the
@@ -71,6 +74,11 @@ class TIMITPerPhone(DenseDesignMatrix):
         assert(file in files)
         self.phone = phone
         self.file = file
+        self.example_list = example_list
+
+        if example_list is not None:
+            assert(numpy.asarray(example_list).mean() >= 0)
+            assert isinstance(example_list, list) is True
 
         # Flags for tr/te set and normalization
         assert(type(test) is bool)
@@ -120,23 +128,22 @@ class TIMITPerPhone(DenseDesignMatrix):
     def _load_data(self):
         data = serial.load(os.path.join(self._data_dir, self.file))
 
-        if self.test is True:
-            data = data[-300:]
+        if self.example_list is not None:
+            idxs = self.example_list
         else:
-            data = data[:-300]
+            if self.test is True:
+                data = data[-300:]
+            else:
+                data = data[:-300]
+            idxs = numpy.arange(len(data))
 
-        idxs = numpy.arange(len(data))
+            if self.random_examples:
+                numpy.random.shuffle(idxs)
 
-        if self.random_examples:
-            numpy.random.shuffle(idxs)
-
-        if self.max_examples is not None:
-            idxs = idxs[:self.max_examples]
-
-        #ipdb.set_trace()
+            if self.max_examples is not None:
+                idxs = idxs[:self.max_examples]
 
         data = data[idxs]
-
         # TODO - Remove this
         self.data = data
 
@@ -193,6 +200,7 @@ def testload_data():
     t = TIMITPerPhone(phone='aa',
                       frame_length=240,
                       max_examples=100,
+                      example_list=[0],
                       random_examples=False,
                       unit_norm=True,
                       standardize=True)
