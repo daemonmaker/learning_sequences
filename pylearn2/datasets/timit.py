@@ -132,9 +132,9 @@ class TIMITPerPhone(DenseDesignMatrix):
             idxs = self.example_list
         else:
             if self.test is True:
-                data = data[-300:]
+                data = data[-500:]
             else:
-                data = data[:-300]
+                data = data[:-500]
             idxs = numpy.arange(len(data))
 
             if self.random_examples:
@@ -199,8 +199,7 @@ def testload_data():
     """
     t = TIMITPerPhone(phone='aa',
                       frame_length=240,
-                      max_examples=100,
-                      example_list=[0],
+                      max_examples=200,
                       random_examples=False,
                       unit_norm=True,
                       standardize=True)
