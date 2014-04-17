@@ -13,6 +13,7 @@ import sys
 import numpy
 from pylearn2.datasets import DenseDesignMatrix
 from pylearn2.utils import serial
+import matplotlib.pyplot as plt
 import pdb
 
 
@@ -75,6 +76,7 @@ class TIMITPerPhone(DenseDesignMatrix):
 
     def _load_data(self):
         data = serial.load(os.path.join(self._data_dir, self.file))
+        self.data = data
         idxs = numpy.arange(len(data))
 
         if self.random_examples:
@@ -91,8 +93,6 @@ class TIMITPerPhone(DenseDesignMatrix):
 
         X = numpy.zeros((total_rows, self.frame_length))
         y = numpy.zeros((total_rows, self.target_width))
-
-        pdb.set_trace()
 
         count = 0
         for i in idxs:
@@ -112,9 +112,13 @@ def testload_data():
     """
     Routine for testing the loading of TIMIT phones
     """
-    t = TIMITPerPhone('aa', 10, max_examples=2, random_examples=True)
+    t = TIMITPerPhone('aa', 240, max_examples=2, random_examples=True)
 
     pdb.set_trace()
+
+    # Plot some random samples
+    plt.plot(t.X[0])
+    plt.show()
 
 if __name__ == "__main__":
     testload_data()
