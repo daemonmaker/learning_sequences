@@ -34,7 +34,7 @@ class TIMITPerPhone(DenseDesignMatrix):
                  random_examples=False,
                  test=False,
                  unit_norm=False,
-                 normalize=False,
+                 standardize=False,
                  mean=None,
                  std=None,
                  rng=None):
@@ -49,8 +49,22 @@ class TIMITPerPhone(DenseDesignMatrix):
             Whether to select the examples from the data set at random if they
             are not all to be used (e.g. when max_examples is less than the
             total number examples).
+        test : bool
+            Whether to use training or test set. False means train and True
+            means train.
+        unit_norm : bool
+            Normalize individual signal with it's L2 norm.
+        standardize : bool
+            Normalize all examples.
+        mean : float
+            Mean of training set. Only used if standarize flag is on.
+        std : float
+            Standard deviation of training set. Only used if standarize flag is
+            on.
+        rng : int
+            Seed for random number generator.
         """
-
+        #ipdb.set_trace()
         # Validate parameters and set member variables
         file = 'wav_' + phone + '.npy'
         files = os.listdir(self._data_dir)
@@ -59,11 +73,24 @@ class TIMITPerPhone(DenseDesignMatrix):
         self.file = file
 
         # Flags for tr/te set and normalization
+        assert(type(test) is bool)
         self.test = test
+
+        assert(type(unit_norm) is bool)
         self.unit_norm = unit_norm
-        self.normalize = normalize
+
+        assert(type(standardize) is bool)
+        self.standardize = standardize
+
+        if (self.test and self.standardize):
+            assert(mean is not None and std is not None)
+
         self._mean = mean
+
+        if std is not None:
+            assert(std > 0)
         self._std = std
+
         self._mean_norm = 0
 
         assert(frame_length > 0)
@@ -98,9 +125,6 @@ class TIMITPerPhone(DenseDesignMatrix):
         else:
             data = data[:-300]
 
-        # TODO - Remove this
-        self.data = data
-
         idxs = numpy.arange(len(data))
 
         if self.random_examples:
@@ -109,45 +133,47 @@ class TIMITPerPhone(DenseDesignMatrix):
         if self.max_examples is not None:
             idxs = idxs[:self.max_examples]
 
+        #ipdb.set_trace()
+
+        data = data[idxs]
+
+        # TODO - Remove this
+        self.data = data
+
         if self.unit_norm is True:
-            for i, example in enumerate(data):
-                exp_euclidean_norm = numpy.sqrt(numpy.square(example).sum())
-                data[i] = example / exp_euclidean_norm
+            for i in range(data.shape[0]):
+                exp_euclidean_norm = numpy.sqrt(numpy.square(data[i]).sum())
+                data[i] /= exp_euclidean_norm
                 self._mean_norm += exp_euclidean_norm
             self._mean_norm /= data.shape[0]
 
-        if self.normalize is True:
-            if self._mean is not None and self._std is not None:
-                for i, example in enumerate(data):
-                    data[i] = (example - self._mean) / self._std
-            else:
+        if self.standardize is True:
+            if self._mean is None or self._std is None:
                 exp_sum = 0
+                exp_var = 0
                 exp_cnt = 0
-                for i, example in enumerate(data):
-                    exp_sum += example.sum()
-                    exp_cnt += len(example)
-                exp_mean = exp_sum / exp_cnt
-                exp_sqr_sum = 0
-                for i, example in enumerate(data):
-                    exp_sqr_sum += numpy.cast[float](numpy.square(example -
-                                                     exp_mean).sum())
-                exp_std = numpy.sqrt(exp_sqr_sum / exp_cnt)
-                self._mean = exp_mean
-                self._std = exp_std
-                for i, example in enumerate(data):
-                    data[i] = (example - self._mean) / self._std
+                for i in range(data.shape[0]):
+                    exp_sum += data[i].sum()
+                    exp_var += (numpy.square(data[i])).sum()
+                    exp_cnt += len(data[i])
+                self._mean = exp_sum / exp_cnt
+                exp_var = exp_var/exp_cnt - self._mean**2
+                self._std = numpy.sqrt(exp_var)
+
+            for i in range(data.shape[0]):
+                data[i] = (data[i] - self._mean) / self._std
 
         # Do math to determine how many samples there will be and make space
         total_rows = 0
         record_len = self.frame_length + self.target_width
-        for i in idxs:
+        for i in range(len(data)):
             total_rows += len(data[i]) - record_len
 
         X = numpy.zeros((total_rows, self.frame_length))
         y = numpy.zeros((total_rows, self.target_width))
 
         count = 0
-        for i in idxs:
+        for i in range(len(data)):
             current_phone = data[i]
             current_phone_len = len(current_phone)
             for j in range(current_phone_len - record_len):
@@ -169,7 +195,7 @@ def testload_data():
                       max_examples=100,
                       random_examples=False,
                       unit_norm=True,
-                      normalize=True)
+                      standardize=True)
     # Plot some random samples
     plt.plot(t.X[0])
     plt.show()
