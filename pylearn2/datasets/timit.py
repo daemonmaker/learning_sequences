@@ -15,7 +15,6 @@ from pylearn2.datasets import DenseDesignMatrix
 from pylearn2.utils import serial
 import matplotlib.pyplot as plt
 from pylearn2.space import CompositeSpace, Conv2DSpace, VectorSpace
-import ipdb
 
 
 class TIMITPerPhone(DenseDesignMatrix):
@@ -33,7 +32,7 @@ class TIMITPerPhone(DenseDesignMatrix):
                  max_examples=None,
                  example_list=None,
                  random_examples=False,
-                 test=False,
+                 which_set='train',
                  unit_norm=False,
                  standardize=False,
                  mean=None,
@@ -52,9 +51,8 @@ class TIMITPerPhone(DenseDesignMatrix):
             Whether to select the examples from the data set at random if they
             are not all to be used (e.g. when max_examples is less than the
             total number examples).
-        test : bool
-            Whether to use training or test set. False means train and True
-            means train.
+        which_set : string
+            Which set to load: 'train', 'validate', or 'test'.
         unit_norm : bool
             Normalize individual signal with it's L2 norm.
         standardize : bool
@@ -67,22 +65,23 @@ class TIMITPerPhone(DenseDesignMatrix):
         rng : int
             Seed for random number generator.
         """
-        #ipdb.set_trace()
         # Validate parameters and set member variables
         file = 'wav_' + phone + '.npy'
         files = os.listdir(self._data_dir)
         assert(file in files)
         self.phone = phone
         self.file = file
-        self.example_list = example_list
 
         if example_list is not None:
-            assert(numpy.asarray(example_list).mean() >= 0)
-            assert isinstance(example_list, list) is True
+            assert(
+                numpy.asarray(example_list).mean() >= 0 and
+                isinstance(example_list, list)
+            )
+        self.example_list = example_list
 
-        # Flags for tr/te set and normalization
-        assert(type(test) is bool)
-        self.test = test
+        self.sets = ['test', 'validate', 'train']
+        assert(which_set in self.sets)
+        self.which_set = which_set
 
         assert(type(unit_norm) is bool)
         self.unit_norm = unit_norm
@@ -90,7 +89,7 @@ class TIMITPerPhone(DenseDesignMatrix):
         assert(type(standardize) is bool)
         self.standardize = standardize
 
-        if (self.test and self.standardize):
+        if (self.which_set != 'train' and self.standardize):
             assert(mean is not None and std is not None)
 
         self._mean = mean
@@ -131,10 +130,11 @@ class TIMITPerPhone(DenseDesignMatrix):
         if self.example_list is not None:
             idxs = self.example_list
         else:
-            if self.test is True:
-                data = data[-500:]
-            else:
-                data = data[:-500]
+            data = {
+                'train': data[:-1000],
+                'validate': data[-1000:-500],
+                'test': data[-500:]
+            }[self.which_set]
             idxs = numpy.arange(len(data))
 
             if self.random_examples:
@@ -197,12 +197,39 @@ def testload_data():
     """
     Routine for testing the loading of TIMIT phones
     """
-    t = TIMITPerPhone(phone='aa',
-                      frame_length=240,
-                      max_examples=200,
-                      random_examples=False,
-                      unit_norm=True,
-                      standardize=True)
+    print 'Validating training set size.'
+    t = TIMITPerPhone(
+        phone='aa',
+        frame_length=100,
+        which_set='train'
+    )
+    assert(t.X.shape[0] == 3895771)
+
+    print 'Validating validation set size.'
+    t = TIMITPerPhone(
+        phone='aa',
+        frame_length=100,
+        which_set='validate'
+    )
+    assert(t.X.shape[0] == 886132)
+
+    print 'Validating test set size.'
+    t = TIMITPerPhone(
+        phone='aa',
+        frame_length=100,
+        which_set='test'
+    )
+    assert(t.X.shape[0] == 908856)
+
+    print 'Plot example signal.'
+    t = TIMITPerPhone(
+        phone='aa',
+        frame_length=240,
+        max_examples=200,
+        random_examples=False,
+        unit_norm=True,
+        standardize=True
+    )
     # Plot some random samples
     plt.plot(t.X[0])
     plt.show()
@@ -210,11 +237,22 @@ def testload_data():
     return t
 
 if __name__ == "__main__":
-    data_specs = (CompositeSpace([VectorSpace(dim=240),
-                                  VectorSpace(dim=1)]),
-                  ('features', 'targets'))
+    data_specs = (
+        CompositeSpace([VectorSpace(dim=240),
+                        VectorSpace(dim=1)]),
+        ('features', 'targets')
+    )
+
     t = testload_data()
-    it = t.iterator(mode='sequential', data_specs=data_specs,
-                    num_batches=None, batch_size=100)
+
+    it = t.iterator(
+        mode='sequential',
+        data_specs=data_specs,
+        num_batches=None,
+        batch_size=100
+    )
+
     X, y = it.next()
+
+    import ipdb
     ipdb.set_trace()
