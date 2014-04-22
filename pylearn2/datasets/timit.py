@@ -225,7 +225,8 @@ def testload_data():
     t = TIMITPerPhone(
         phone='aa',
         frame_length=240,
-        max_examples=200,
+        max_examples=1000,
+        which_set='train',
         random_examples=False,
         unit_norm=True,
         standardize=True
@@ -245,6 +246,9 @@ if __name__ == "__main__":
 
     t = testload_data()
 
+    print 't._mean: ' + str(t._mean) + '\tt._std: ' + str(t._std)
+    print 't.X.shape: ' + str(t.X.shape) + '\tt.y.shape: ' + str(t.y.shape)
+
     it = t.iterator(
         mode='sequential',
         data_specs=data_specs,
@@ -254,5 +258,5 @@ if __name__ == "__main__":
 
     X, y = it.next()
 
-    import ipdb
-    ipdb.set_trace()
+    print 'X.shape: ' + str(X.shape)
+    print 'y.shape: ' + str(y.shape)

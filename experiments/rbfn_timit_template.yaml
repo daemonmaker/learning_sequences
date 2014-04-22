@@ -1,0 +1,52 @@
+!obj:pylearn2.train.Train {
+    dataset: &train !obj:learning_sequences.pylearn2.datasets.timit.TIMITPerPhone {
+        phone: 'aa',
+        frame_length: &fl 240,
+        which_set: 'train',
+        max_examples: 1000,
+        standardize: True,
+        unit_norm: True,
+    },
+    model: !obj:pylearn2.models.mlp.MLP {
+        batch_size: 64,
+        nvis: *fl,
+        layers: [
+             !obj:learning_sequences.pylearn2.models.rbfn.RadialBasisFunction {
+                 dim: %(rbf_nodes)i,
+                 layer_name: 'h1',
+                 irange: 0.5,
+                 standard_deviation: %(standard_deviation)f,
+                 training_data: *train
+             },
+             !obj:pylearn2.models.mlp.Linear {
+                 dim        : 1,
+                 layer_name : 'h2',
+                 irange     : 0.5,
+             },
+        ],
+    },
+    algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
+        learning_rate: .1e-2,
+        monitor_iteration_mode: 'even_sequential',
+        monitoring_batches: 10,
+        monitoring_dataset: {
+            'train' : *train,
+            'valid': !obj:learning_sequences.pylearn2.datasets.timit.TIMITPerPhone {
+                        phone: 'aa',
+                        frame_length: *fl,
+                        which_set: 'validate',
+                        max_examples: 500,
+                        standardize: True,
+                        unit_norm: True,
+                        mean: -1.704472379e-05,
+                        std: 0.0227029346848
+                        },
+        },
+        cost: !obj:pylearn2.costs.mlp.Default {},
+        termination_criterion: !obj:pylearn2.termination_criteria.EpochCounter {
+            max_epochs: 100
+        },
+    },
+    save_path: "rbfn_timit_model.pkl",
+    save_freq: 1,
+}

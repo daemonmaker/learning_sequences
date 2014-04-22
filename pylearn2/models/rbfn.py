@@ -9,6 +9,8 @@ __maintainer__ = "Dustin Webb"
 __email__ = "webbd@iro"
 
 from pylearn2.models.mlp import *
+import numpy
+import ipdb
 
 
 class RadialBasisFunction(Linear):
@@ -35,8 +37,8 @@ class RadialBasisFunction(Linear):
             state_below = self.input_space.format_as(state_below,
                                                      self.desired_space)
 
-        z = (state_below.flatten() - self.centers) ** 2
-        z = z.sum(axis=1, keepdims=True).T
+        z = (state_below.dimshuffle(0, 'x', 1) - self.centers[None, :, :]) ** 2
+        z = z.sum(axis=2)
         if self.layer_name is not None:
             z.name = self.layer_name + '_z'
 
